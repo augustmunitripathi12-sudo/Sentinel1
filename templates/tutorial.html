@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sentinel Tutorial</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; min-height: 100vh; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { text-align: center; color: #128c7e; margin: 24px 0 32px; font-size: 28px; }
+        .step { background: white; padding: 24px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .step-num { background: #128c7e; color: white; width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; margin-right: 12px; font-size: 14px; }
+        .step h3 { display: inline; font-size: 18px; color: #111; }
+        .step p { color: #667781; margin-top: 10px; line-height: 1.6; font-size: 15px; }
+        .btn { display: block; width: 100%; max-width: 400px; margin: 32px auto; padding: 16px; background: #128c7e; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; }
+        .btn:hover { background: #107a6d; }
+        .btn:active { transform: scale(0.98); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>&#x1F6E1;&#xFE0F; How Sentinel Works</h1>
+        <div class="step">
+            <span class="step-num">1</span>
+            <h3>Create an Account</h3>
+            <p>Sign up with your username, email, and password. You'll get a verification email to confirm you're real.</p>
+        </div>
+        <div class="step">
+            <span class="step-num">2</span>
+            <h3>Secure Login with 2FA</h3>
+            <p>Every time you log in, we send a 4-digit code to your email. Enter it to access your chats.</p>
+        </div>
+        <div class="step">
+            <span class="step-num">3</span>
+            <h3>Find Your Finder ID</h3>
+            <p>Go to Settings (&#x2699;) to see your unique Finder ID. Share it with friends so they can add you.</p>
+        </div>
+        <div class="step">
+            <span class="step-num">4</span>
+            <h3>Add Friends</h3>
+            <p>Tap the + button and enter your friend's Finder ID. Once added, you can start messaging instantly.</p>
+        </div>
+        <div class="step">
+            <span class="step-num">5</span>
+            <h3>Send Messages & Voice Notes</h3>
+            <p>Type text messages or tap the &#x1F3A4; mic button to record and send voice messages &mdash; just like WhatsApp.</p>
+        </div>
+        <a href="{{ url_for('register') }}" class="btn">Get Started &mdash; Create Account</a>
+    </div>
+</body>
+</html>

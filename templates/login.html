@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Log In - Sentinel</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 16px; }
+        .box { background: white; padding: 32px 24px; border-radius: 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.08); width: 100%; max-width: 400px; }
+        .logo { font-size: 40px; text-align: center; margin-bottom: 8px; }
+        h2 { text-align: center; color: #128c7e; margin-bottom: 24px; font-size: 24px; }
+        input { width: 100%; padding: 14px 16px; margin: 8px 0; border: 1.5px solid #e0e0e0; border-radius: 12px; font-size: 16px; outline: none; transition: border-color 0.2s; -webkit-appearance: none; }
+        input:focus { border-color: #128c7e; }
+        button { width: 100%; padding: 14px; background: #128c7e; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 16px; transition: background 0.2s; }
+        button:hover { background: #107a6d; }
+        button:active { transform: scale(0.98); }
+        .link { text-align: center; margin-top: 20px; color: #667781; font-size: 15px; }
+        .link a { color: #128c7e; text-decoration: none; font-weight: 500; }
+        .flash { color: #e74c3c; text-align: center; margin-bottom: 16px; font-size: 14px; }
+        .note { background: #e8f5e9; padding: 12px; border-radius: 10px; font-size: 13px; color: #2e7d32; margin-bottom: 16px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <div class="logo">&#x1F6E1;&#xFE0F;</div>
+        <h2>Log In to Sentinel</h2>
+        <div class="note">A 4-digit code will be sent to your email for 2FA verification.</div>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for msg in messages %}
+                    <div class="flash">{{ msg }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <form method="POST">
+            <input type="text" name="username" placeholder="Username" required autocomplete="username">
+            <input type="password" name="password" placeholder="Password" required autocomplete="current-password">
+            <button type="submit">Continue</button>
+        </form>
+        <div class="link">New here? <a href="{{ url_for('register') }}">Create account</a></div>
+    </div>
+</body>
+</html>

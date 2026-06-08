@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Welcome to Sentinel</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #128c7e; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .box { background: white; padding: 48px 32px; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 100%; max-width: 440px; text-align: center; }
+        .logo { font-size: 48px; margin-bottom: 16px; }
+        h1 { color: #111; font-size: 28px; margin-bottom: 8px; }
+        .sub { color: #667781; font-size: 16px; margin-bottom: 32px; line-height: 1.5; }
+        .btn-group { display: flex; flex-direction: column; gap: 12px; }
+        .btn { padding: 14px 24px; border-radius: 12px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; transition: all 0.2s; }
+        .btn-primary { background: #128c7e; color: white; }
+        .btn-primary:hover { background: #107a6d; }
+        .btn-secondary { background: #f0f2f5; color: #111; }
+        .btn-secondary:hover { background: #e4e6e8; }
+        .btn:active { transform: scale(0.97); }
+        .divider { margin: 24px 0; color: #667781; font-size: 14px; }
+        .auth-links { display: flex; justify-content: center; gap: 24px; margin-top: 24px; }
+        .auth-links a { color: #128c7e; text-decoration: none; font-weight: 500; font-size: 15px; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <div class="logo">&#x1F6E1;&#xFE0F;</div>
+        <h1>Hello, welcome to Sentinel!</h1>
+        <p class="sub">Let's get you started. Press the button below to get a tutorial of the place.</p>
+        <div class="btn-group">
+            <a href="{{ url_for('tutorial') }}" class="btn btn-primary">Sure, show me around</a>
+            <a href="{{ url_for('login') }}" class="btn btn-secondary">No, I already know how to use Sentinel</a>
+        </div>
+        <div class="divider">or</div>
+        <div class="auth-links">
+            <a href="{{ url_for('login') }}">Log In</a>
+            <a href="{{ url_for('register') }}">Sign Up</a>
+        </div>
+    </div>
+</body>
+</html>

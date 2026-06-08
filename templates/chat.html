@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sentinel</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; height: 100%; overflow: hidden; background: #fff; }
+        body { display: flex; }
+        .sidebar { width: 100%; max-width: 380px; background: #fff; border-right: 1px solid #ddd; display: flex; flex-direction: column; flex-shrink: 0; height: 100%; overflow: hidden; position: relative; }
+        .sidebar-header { background: #128c7e; color: white; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .user-info { font-weight: 600; font-size: 17px; }
+        .header-actions { display: flex; gap: 8px; }
+        .header-actions button { background: rgba(255,255,255,0.2); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 22px; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+        .header-actions button:hover { background: rgba(255,255,255,0.35); }
+        .header-actions button:active { transform: scale(0.92); }
+        .contacts-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; min-height: 0; }
+        .contact-item { padding: 14px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 12px; transition: background 0.15s; }
+        .contact-item:hover, .contact-item.active { background: #f5f5f5; }
+        .contact-avatar { width: 50px; height: 50px; background: #128c7e; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: 600; flex-shrink: 0; }
+        .contact-name { font-weight: 600; color: #111; font-size: 16px; }
+        .lonely-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; text-align: center; color: #667781; }
+        .lonely-state h3 { font-size: 20px; margin-bottom: 12px; color: #41525d; }
+        .lonely-state p { font-size: 15px; line-height: 1.5; max-width: 260px; }
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: #f0f2f5; position: relative; height: 100%; overflow: hidden; min-height: 0; }
+        .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #667781; padding: 32px; }
+        .empty-state h2 { font-size: 24px; margin-bottom: 12px; color: #41525d; }
+        .empty-state p { font-size: 15px; max-width: 300px; line-height: 1.5; }
+        .chat-view { flex: 1; display: none; grid-template-rows: auto 1fr auto; height: 100%; min-height: 0; overflow: hidden; }
+        .chat-header { background: #f0f2f5; padding: 12px 16px; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+        .back-btn { display: none; background: none; border: none; color: #128c7e; font-size: 24px; cursor: pointer; padding: 4px; }
+        .chat-header-avatar { width: 40px; height: 40px; background: #128c7e; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 16px; flex-shrink: 0; }
+        .chat-header-name { font-weight: 600; font-size: 16px; color: #111; }
+        .messages { overflow-y: auto; padding: 16px; background: #efeae2; display: flex; flex-direction: column; -webkit-overflow-scrolling: touch; min-height: 0; }
+        .message { max-width: 75%; margin-bottom: 10px; padding: 10px 14px; border-radius: 12px; position: relative; word-wrap: break-word; animation: popIn 0.2s ease; }
+        @keyframes popIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .message.sent { background: #d9fdd3; margin-left: auto; border-bottom-right-radius: 4px; }
+        .message.received { background: white; margin-right: auto; border-bottom-left-radius: 4px; }
+        .message-sender { font-size: 12px; color: #128c7e; font-weight: 600; margin-bottom: 3px; }
+        .message-text { font-size: 15px; color: #111; line-height: 1.4; }
+        .message-time { font-size: 11px; color: #999; text-align: right; margin-top: 4px; }
+        .voice-message { display: flex; align-items: center; gap: 10px; min-width: 180px; }
+        .voice-play-btn { width: 36px; height: 36px; border-radius: 50%; border: none; background: #128c7e; color: white; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.2s; }
+        .voice-play-btn:hover { background: #107a6d; }
+        .voice-play-btn:active { transform: scale(0.92); }
+        .voice-play-btn.playing { background: #e74c3c; }
+        .voice-label { font-size: 13px; color: #667781; }
+        .voice-duration { font-size: 12px; color: #999; margin-left: auto; }
+        .input-area { background: #f0f2f5; padding: 10px 12px; display: flex; align-items: center; gap: 8px; border-top: 1px solid #ddd; flex-shrink: 0; }
+        .input-area input { flex: 1; padding: 12px 16px; border: none; border-radius: 20px; font-size: 16px; outline: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); -webkit-appearance: none; }
+        .input-area button { background: #128c7e; color: white; border: none; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: background 0.2s; flex-shrink: 0; }
+        .input-area button:hover { background: #107a6d; }
+        .input-area button:active { transform: scale(0.92); }
+        .mic-btn { background: #667781 !important; }
+        .mic-btn:hover { background: #555f66 !important; }
+        .mic-btn.recording { background: #e74c3c !important; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .recording-row { display: none; align-items: center; gap: 12px; flex: 1; }
+        .recording-row.active { display: flex; }
+        .recording-indicator { display: flex; align-items: center; gap: 10px; flex: 1; }
+        .recording-dot { width: 12px; height: 12px; background: #e74c3c; border-radius: 50%; animation: blink 1s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .recording-time { font-size: 15px; color: #e74c3c; font-weight: 600; font-variant-numeric: tabular-nums; }
+        .rec-btn { width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform 0.15s; }
+        .rec-btn:active { transform: scale(0.92); }
+        .rec-btn.cancel { background: #fee2e2; color: #991b1b; }
+        .rec-btn.send { background: #d9fdd3; color: #128c7e; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        .modal.active { display: flex; }
+        .modal-content { background: white; padding: 24px; border-radius: 16px; width: 90%; max-width: 420px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); animation: modalPop 0.25s ease; }
+        @keyframes modalPop { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .modal-content h3 { margin-bottom: 8px; color: #111; font-size: 20px; }
+        .modal-content > p { color: #667781; margin-bottom: 20px; font-size: 14px; }
+        .modal-content input { width: 100%; padding: 14px; border: 1.5px solid #e0e0e0; border-radius: 12px; font-size: 16px; margin-bottom: 8px; outline: none; transition: border 0.2s; -webkit-appearance: none; }
+        .modal-content input:focus { border-color: #128c7e; }
+        .error-msg { color: #e74c3c; font-size: 13px; margin-bottom: 12px; min-height: 18px; }
+        .modal-buttons { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+        .modal-buttons button { padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer; font-size: 15px; font-weight: 500; transition: background 0.2s; }
+        .btn-primary { background: #128c7e; color: white; }
+        .btn-primary:hover { background: #107a6d; }
+        .btn-secondary { background: #f0f2f5; color: #111; }
+        .btn-secondary:hover { background: #e4e6e8; }
+        .profile-info p { margin-bottom: 16px; color: #111; font-size: 15px; }
+        .profile-info strong { color: #667781; display: block; font-size: 11px; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.8px; font-weight: 600; }
+        .finder-id-box { background: #f0f2f5; padding: 16px; border-radius: 12px; font-family: 'SF Mono', Monaco, monospace; font-size: 18px; color: #128c7e; font-weight: 700; word-break: break-all; letter-spacing: 0.5px; user-select: all; text-align: center; }
+        .hint { font-size: 13px; color: #667781; margin-top: 8px; line-height: 1.4; }
+        /* Profile picture styles */
+        .profile-pic-section { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; gap: 12px; }
+        .profile-pic-preview { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; border: 3px solid #128c7e; background: #128c7e; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; font-weight: 700; overflow: hidden; flex-shrink: 0; }
+        .profile-pic-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .profile-pic-btn { background: #f0f2f5; color: #128c7e; border: 1.5px solid #128c7e; border-radius: 20px; padding: 8px 18px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .profile-pic-btn:hover { background: #e0f2ef; }
+        .pic-upload-status { font-size: 13px; color: #667781; min-height: 18px; text-align: center; }
+        /* Avatar with profile picture */
+        .contact-avatar img, .chat-header-avatar img, .sidebar-header-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; max-width: none; border-right: none; position: absolute; top: 0; left: 0; height: 100%; z-index: 1; }
+            .sidebar.hidden { display: none; }
+            .chat-area { width: 100%; position: absolute; top: 0; left: 0; height: 100%; z-index: 2; display: none; }
+            .chat-area.visible { display: flex; }
+            .back-btn { display: block; }
+            .chat-header { padding: 10px 12px; }
+            .message { max-width: 85%; padding: 10px 12px; }
+            .message-text { font-size: 15px; }
+            .input-area input { font-size: 16px; }
+            .modal-content { padding: 20px; border-radius: 16px; }
+        }
+        @media (min-width: 769px) {
+            .sidebar { position: relative; }
+            .chat-area { position: relative; display: flex !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div class="contact-avatar" id="myAvatarSidebar" style="width:38px;height:38px;font-size:16px;flex-shrink:0;">{{ current_user.username[0]|upper }}</div>
+                <div class="user-info">{{ current_user.username }}</div>
+            </div>
+            <div class="header-actions">
+                <button onclick="openAddContact()" title="Add Friend">+</button>
+                <button onclick="openSettings()" title="Settings">&#x2699;</button>
+            </div>
+        </div>
+        <div class="contacts-list" id="contactsList"></div>
+    </div>
+    <div class="chat-area" id="chatArea">
+        <div class="empty-state" id="emptyState">
+            <h2>It's getting lonely...</h2>
+            <p>Ask a friend to give you their ID so that you can add them and start messaging.</p>
+        </div>
+        <div class="chat-view" id="chatView" style="display: none;">
+            <div class="chat-header">
+                <button class="back-btn" onclick="goBack()">&#x2190;</button>
+                <div class="chat-header-avatar" id="chatHeaderAvatar">?</div>
+                <div class="chat-header-name" id="chatHeaderName">Select a chat</div>
+            </div>
+            <div class="messages" id="messages"></div>
+            <div class="input-area" id="inputArea">
+                <div class="text-input-row" id="textInputRow" style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                    <input type="text" id="msgInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMessage()">
+                    <button class="mic-btn" id="micBtn" onclick="startRecording()" title="Voice message">&#x1F3A4;</button>
+                    <button onclick="sendMessage()">&#x27A4;</button>
+                </div>
+                <div class="recording-row" id="recordingRow">
+                    <div class="recording-indicator">
+                        <div class="recording-dot"></div>
+                        <span class="recording-time" id="recordingTime">0:00</span>
+                    </div>
+                    <button class="rec-btn cancel" onclick="cancelRecording()" title="Cancel">&#x2715;</button>
+                    <button class="rec-btn send" onclick="stopRecording()" title="Send">&#x23F9;</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal" id="addContactModal">
+        <div class="modal-content">
+            <h3>Add Friend</h3>
+            <p>Enter the Finder ID you wish to message:</p>
+            <input type="text" id="finderIdInput" placeholder="e.g. john1234!@" onkeypress="if(event.key==='Enter') addContact()">
+            <div class="error-msg" id="addContactError"></div>
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closeAddContact()">Cancel</button>
+                <button class="btn-primary" onclick="addContact()">Add</button>
+            </div>
+        </div>
+    </div>
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <h3>Profile</h3>
+            <div class="profile-pic-section">
+                <div class="profile-pic-preview" id="settingsAvatarPreview">
+                    <span id="settingsAvatarInitial">{{ current_user.username[0]|upper }}</span>
+                </div>
+                <button class="profile-pic-btn" onclick="document.getElementById('picFileInput').click()">Change Profile Picture</button>
+                <input type="file" id="picFileInput" accept="image/*" style="display:none" onchange="handlePicUpload(event)">
+                <div class="pic-upload-status" id="picUploadStatus"></div>
+            </div>
+            <div class="profile-info">
+                <p><strong>Username</strong> {{ current_user.username }}</p>
+                <p><strong>Email</strong> {{ current_user.email }}</p>
+                <p><strong>Your Finder ID</strong>
+                    <div class="finder-id-box" id="profileFinderId">{{ current_user.finder_id }}</div>
+                </p>
+                <p class="hint">Share this Finder ID with friends so they can add you.</p>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closeSettings()">Close</button>
+                <a href="{{ url_for('logout') }}" style="text-decoration: none;"><button class="btn-secondary" style="background: #fee2e2; color: #991b1b;">Logout</button></a>
+            </div>
+        </div>
+    </div>
+    <script>
+        const socket = io();
+        let currentContactId = null;
+        let contacts = [];
+        const myId = {{ current_user.id }};
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let recordingTimer = null;
+        let recordingSeconds = 0;
+        let recordingStartTime = null;
+        const MAX_RECORD_SECONDS = 60;
+        socket.on('connect', () => { loadContacts(); loadMyProfile(); });
+        function loadContacts() {
+            fetch('/api/contacts').then(r => r.json()).then(data => {
+                contacts = data;
+                renderContacts();
+            });
+        }
+        function renderContacts() {
+            const list = document.getElementById('contactsList');
+            list.innerHTML = '';
+            if (contacts.length === 0) {
+                list.innerHTML = '<div class="lonely-state"><h3>It\'s getting lonely...</h3><p>Ask a friend to give you their ID so that you can add them and start messaging.</p></div>';
+                return;
+            }
+            contacts.forEach(c => {
+                const div = document.createElement('div');
+                div.className = 'contact-item';
+                div.setAttribute('data-id', c.id);
+                div.onclick = () => selectContact(c.id);
+                div.innerHTML = '<div class="contact-avatar">' + c.username[0].toUpperCase() + '</div><div class="contact-name">' + escapeHtml(c.username) + '</div>';
+                list.appendChild(div);
+            });
+        }
+        function selectContact(id) {
+            currentContactId = id;
+            const contact = contacts.find(c => c.id === id);
+            if (!contact) return;
+            document.getElementById('emptyState').style.display = 'none';
+            const chatView = document.getElementById('chatView');
+            chatView.style.display = 'grid';
+            document.getElementById('chatHeaderName').textContent = contact.username;
+            document.getElementById('chatHeaderAvatar').textContent = contact.username[0].toUpperCase();
+            document.getElementById('messages').innerHTML = '';
+            document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active'));
+            const activeEl = document.querySelector('[data-id="' + id + '"]');
+            if (activeEl) activeEl.classList.add('active');
+            loadMessages(id);
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.add('hidden');
+                document.getElementById('chatArea').classList.add('visible');
+            }
+        }
+        function goBack() {
+            document.getElementById('sidebar').classList.remove('hidden');
+            document.getElementById('chatArea').classList.remove('visible');
+            currentContactId = null;
+        }
+        function loadMessages(contactId) {
+            fetch('/api/messages/' + contactId).then(r => r.json()).then(msgs => {
+                const container = document.getElementById('messages');
+                container.innerHTML = '';
+                msgs.forEach(m => appendMessage(m.sender_id, m.sender, m.content, m.timestamp, m.is_voice, m.audio_data, false));
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+        function sendMessage() {
+            const input = document.getElementById('msgInput');
+            const msg = input.value.trim();
+            if (!msg || !currentContactId) return;
+            socket.emit('private_message', { receiver_id: currentContactId, msg: msg, is_voice: false, audio_data: null });
+            input.value = '';
+        }
+        function appendMessage(senderId, sender, msg, time, isVoice, audioData, animate) {
+            const isSent = senderId === myId;
+            const div = document.createElement('div');
+            div.className = 'message ' + (isSent ? 'sent' : 'received');
+            if (!animate) div.style.animation = 'none';
+            if (isVoice && audioData) {
+                const audioId = 'audio-' + Date.now() + Math.random().toString(36).substr(2, 9);
+                div.innerHTML = '<div class="message-sender">' + escapeHtml(sender) + '</div><div class="voice-message"><button class="voice-play-btn" id="btn-' + audioId + '" onclick="toggleAudio(\'' + audioId + '\', this)">&#x25B6;</button><audio id="' + audioId + '" src="data:audio/webm;base64,' + audioData + '" preload="metadata"></audio><span class="voice-label">Voice message</span><span class="voice-duration" id="dur-' + audioId + '">0:00</span></div><div class="message-time">' + time + '</div>';
+                setTimeout(() => {
+                    const audio = document.getElementById(audioId);
+                    if (audio) {
+                        audio.onloadedmetadata = () => {
+                            const dur = Math.round(audio.duration);
+                            const mins = Math.floor(dur / 60);
+                            const secs = dur % 60;
+                            document.getElementById('dur-' + audioId).textContent = mins + ':' + secs.toString().padStart(2, '0');
+                        };
+                    }
+                }, 100);
+            } else {
+                div.innerHTML = '<div class="message-sender">' + escapeHtml(sender) + '</div><div class="message-text">' + escapeHtml(msg) + '</div><div class="message-time">' + time + '</div>';
+            }
+            const container = document.getElementById('messages');
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+        function toggleAudio(audioId, btn) {
+            const audio = document.getElementById(audioId);
+            if (!audio) return;
+            document.querySelectorAll('audio').forEach(a => { if (a.id !== audioId && !a.paused) { a.pause(); a.currentTime = 0; } });
+            document.querySelectorAll('.voice-play-btn').forEach(b => { if (b.id !== 'btn-' + audioId) { b.textContent = '&#x25B6;'; b.classList.remove('playing'); } });
+            if (audio.paused) {
+                audio.play();
+                btn.textContent = '&#x23F8;';
+                btn.classList.add('playing');
+                audio.onended = () => { btn.textContent = '&#x25B6;'; btn.classList.remove('playing'); };
+            } else {
+                audio.pause();
+                audio.currentTime = 0;
+                btn.textContent = '&#x25B6;';
+                btn.classList.remove('playing');
+            }
+        }
+        socket.on('new_message', (data) => {
+            const relevant = (data.sender_id === currentContactId && data.receiver_id === myId) || (data.sender_id === myId && data.receiver_id === currentContactId);
+            if (relevant) {
+                appendMessage(data.sender_id, data.sender, data.msg, data.timestamp, data.is_voice, data.audio_data, true);
+            }
+            if (data.sender_id !== myId && !contacts.find(c => c.id === data.sender_id)) {
+                loadContacts();
+            }
+        });
+        async function startRecording() {
+            if (!currentContactId) { alert('Select a chat first'); return; }
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                beginRecording(stream);
+            } catch (err) {
+                handleMicError(err);
+            }
+        }
+        function beginRecording(stream) {
+            const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
+            mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+            audioChunks = [];
+            mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(audioChunks, { type: mimeType || 'audio/webm' });
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64 = reader.result.split(',')[1];
+                    sendVoiceMessage(base64);
+                };
+                reader.readAsDataURL(blob);
+                stream.getTracks().forEach(t => t.stop());
+            };
+            mediaRecorder.start();
+            showRecordingUI();
+        }
+        function handleMicError(err) {
+            console.error('Mic error:', err);
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                if (isMobile && /Android/i.test(navigator.userAgent)) {
+                    const confirmed = confirm('Microphone access is blocked.\n\nTo record voice messages, please allow microphone permission in your browser settings.\n\nWould you like to open your browser settings now?');
+                    if (confirmed) { window.location.href = 'intent://settings/#Intent;scheme=android-app;package=com.android.chrome;end'; }
+                } else if (isMobile && /iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                    alert('Microphone access is blocked.\n\nTo fix this:\n1. Open iPhone Settings\n2. Scroll down and tap Safari (or your browser)\n3. Tap Microphone\n4. Select Allow\n\nThen come back and try again.');
+                } else {
+                    alert('Microphone access is blocked.\n\nPlease click the lock icon in your browser address bar and allow microphone access, then refresh the page.');
+                }
+            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                alert('No microphone found on this device. Please connect a microphone and try again.');
+            } else {
+                alert('Could not access microphone: ' + err.message);
+            }
+        }
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') { mediaRecorder.stop(); }
+            hideRecordingUI();
+        }
+        function cancelRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') { mediaRecorder.stop(); audioChunks = []; }
+            hideRecordingUI();
+        }
+        function sendVoiceMessage(base64Audio) {
+            if (!currentContactId || !base64Audio) return;
+            socket.emit('private_message', { receiver_id: currentContactId, msg: '[Voice message]', is_voice: true, audio_data: base64Audio });
+        }
+        function showRecordingUI() {
+            document.getElementById('textInputRow').style.display = 'none';
+            document.getElementById('recordingRow').classList.add('active');
+            document.getElementById('micBtn').classList.add('recording');
+            recordingSeconds = 0;
+            recordingStartTime = Date.now();
+            updateRecordingTimer();
+            recordingTimer = setInterval(updateRecordingTimer, 1000);
+        }
+        function hideRecordingUI() {
+            document.getElementById('textInputRow').style.display = 'flex';
+            document.getElementById('recordingRow').classList.remove('active');
+            document.getElementById('micBtn').classList.remove('recording');
+            clearInterval(recordingTimer);
+            recordingSeconds = 0;
+            recordingStartTime = null;
+        }
+        function updateRecordingTimer() {
+            recordingSeconds = Math.floor((Date.now() - recordingStartTime) / 1000);
+            if (recordingSeconds >= MAX_RECORD_SECONDS) { stopRecording(); return; }
+            const mins = Math.floor(recordingSeconds / 60);
+            const secs = recordingSeconds % 60;
+            document.getElementById('recordingTime').textContent = mins + ':' + secs.toString().padStart(2, '0');
+        }
+        function openAddContact() {
+            document.getElementById('addContactModal').classList.add('active');
+            document.getElementById('finderIdInput').value = '';
+            document.getElementById('addContactError').textContent = '';
+            setTimeout(() => document.getElementById('finderIdInput').focus(), 50);
+        }
+        function closeAddContact() {
+            document.getElementById('addContactModal').classList.remove('active');
+        }
+        function addContact() {
+            const finderId = document.getElementById('finderIdInput').value.trim();
+            const errorEl = document.getElementById('addContactError');
+            errorEl.textContent = '';
+            if (!finderId) { errorEl.textContent = 'Please enter a Finder ID'; return; }
+            fetch('/api/contacts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ finder_id: finderId }) })
+                .then(r => r.json()).then(data => {
+                    if (data.error) { errorEl.textContent = data.error; }
+                    else { closeAddContact(); loadContacts(); if (data.contact) selectContact(data.contact.id); }
+                }).catch(() => { errorEl.textContent = 'Something went wrong. Try again.'; });
+        }
+        // ---- Profile picture ----
+        let myProfilePicture = null;
+        function loadMyProfile() {
+            fetch('/api/profile').then(r => r.json()).then(data => {
+                if (data.profile_picture) {
+                    myProfilePicture = data.profile_picture;
+                    applyMyAvatar(myProfilePicture);
+                }
+            }).catch(() => {});
+        }
+        function applyMyAvatar(picDataUrl) {
+            const sidebarAvatar = document.getElementById('myAvatarSidebar');
+            if (sidebarAvatar) {
+                if (picDataUrl) {
+                    sidebarAvatar.innerHTML = '<img src="' + picDataUrl + '" alt="me">';
+                } else {
+                    sidebarAvatar.textContent = '{{ current_user.username[0]|upper }}';
+                }
+            }
+            const settingsPreview = document.getElementById('settingsAvatarPreview');
+            if (settingsPreview) {
+                if (picDataUrl) {
+                    settingsPreview.innerHTML = '<img src="' + picDataUrl + '" alt="profile">';
+                } else {
+                    settingsPreview.innerHTML = '<span id="settingsAvatarInitial">{{ current_user.username[0]|upper }}</span>';
+                }
+            }
+        }
+        function handlePicUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                document.getElementById('picUploadStatus').textContent = 'Please select an image file.';
+                return;
+            }
+            if (file.size > 2 * 1024 * 1024) {
+                document.getElementById('picUploadStatus').textContent = 'Image must be under 2MB.';
+                return;
+            }
+            document.getElementById('picUploadStatus').textContent = 'Uploading...';
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64 = reader.result;
+                fetch('/api/profile/picture', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: base64 })
+                }).then(r => r.json()).then(data => {
+                    if (data.error) {
+                        document.getElementById('picUploadStatus').textContent = data.error;
+                    } else {
+                        myProfilePicture = data.profile_picture;
+                        applyMyAvatar(myProfilePicture);
+                        document.getElementById('picUploadStatus').textContent = 'Profile picture updated!';
+                        setTimeout(() => { document.getElementById('picUploadStatus').textContent = ''; }, 2000);
+                    }
+                }).catch(() => {
+                    document.getElementById('picUploadStatus').textContent = 'Upload failed. Try again.';
+                });
+            };
+            reader.readAsDataURL(file);
+            // Reset input so same file can be re-selected
+            event.target.value = '';
+        }
+        function openSettings() {
+            // Refresh avatar preview each time settings opens
+            applyMyAvatar(myProfilePicture);
+            document.getElementById('picUploadStatus').textContent = '';
+            document.getElementById('settingsModal').classList.add('active');
+        }
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
+        });
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                document.getElementById('sidebar').classList.remove('hidden');
+                document.getElementById('chatArea').classList.remove('visible');
+            }
+        });
+    </script>
+</body>
+</html>
