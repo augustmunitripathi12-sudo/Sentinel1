@@ -21,7 +21,7 @@ SPECIAL_CHARS = "!@#$%^&*"
 
 # ===================== HARDCODED CREDENTIALS =====================
 HARDCODED_EMAIL = "augustmuni.tripathi12@gmail.com"
-HARDCODED_16DIGIT_PASSWORD = "verccigejkvydlts"  # verc cige jkvy dlts (spaces removed)
+HARDCODED_16DIGIT_PASSWORD = "verc cige jkvy dlts"  # verc cige jkvy dlts (spaces removed)
 
 # ===================== FLASK =====================
 app = Flask(__name__)
